@@ -3,7 +3,7 @@
 require 'xmpp4r-observable'
 require 'control'
 
-#Jabber::debug = true
+Jabber::debug = true
 
 if ARGV.size < 2
   puts "Usage: #{$0} <superfeedr-jid> <superfeedr-password>"
@@ -16,8 +16,8 @@ jid = "#{jid}@superfeedr.com" unless jid.index('@')
 $im = Jabber::Observable.new(jid, pw)
 $im.status :xa, 'At your service!'
 
-#pubsub = Jabber::Observable::PubSub.new($im, 'firehoser.superfeedr.com')
 class Handler
+  attr_reader :users
   def initialize
     @users = {}
   end
@@ -29,8 +29,22 @@ class Handler
   end
 end
 
-o = Handler.new
-$im.add_observer(:message, o)
+class Notifier
+  def initialize(h)
+    @h = h
+    @pubsub = Jabber::Observable::PubSub.new($im, 'firehoser.superfeedr.com')
+  end
+  def update(what, event)
+    p "arrived", @h.users.any?
+    @h.users.first[1].notify(event) if @h.users.any? ### FIXME
+  end
+end
+
+
+h = Handler.new
+n = Notifier.new(h)
+$im.add_observer(:message, h)
+$im.add_observer(:event, n)
 
 puts "Running"
 Thread.stop
