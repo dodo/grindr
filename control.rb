@@ -176,8 +176,8 @@ eos
             xcontent = a[:content] == "" ? "" : '<br/>'+a[:content]
 
             deliver *case @mode
-              when :title, :short then ["[#{a[:published]}] #{a[:title]} on [ #{a[:link]} ]","<span style='font-size:small;'>[#{a[:published]}]</span> #{a[:title]} <i>on [ #{a[:link]} ]</i>"]
-              when :all, :full then ["#{a[:title]}\n// Posted [#{a[:published]}] from [#{a[:author]}] on [ #{a[:link]} ]\n#{a[:content]}".strip.chomp,"<b>#{a[:title]}</b><br/><span style='font-size:small;'>// Posted [#{a[:published]}] from [#{a[:author]}] <i>on [ #{a[:link]} ]</i></span>#{xcontent}".strip.chomp]
+              when :title, :short then ["[#{a[:published]}] #{a[:title]} on [ #{a[:link]} ]","<span style='font-size: small;'>[#{a[:published]}]</span> #{a[:title]} <i>on [ <a href='#{a[:link]}'>#{a[:link]}</a> ]</i>"]
+              when :all, :full then ["#{a[:title]}\n// Posted [#{a[:published]}] from [#{a[:author]}] on [ #{a[:link]} ]\n#{a[:content]}".strip.chomp,"<b>#{a[:title]}</b><span style='font-size: small;'><br/>\n// Posted [#{a[:published]}] from [#{a[:author]}] <i>on [ <a href='#{a[:link]}'>#{a[:link]}</a> ]</i></span>\n#{xcontent}".strip.chomp]
             end
           end
         end
@@ -193,7 +193,7 @@ eos
         diff, nextf = Time.parse(nextf) - Time.now(), Time.parse(nextf).to_s
         h, m, s = diff.div(3600), diff.div(60), "%.2f" % (diff % 60)
         time = [ (h.zero? ? nil : "#{h}h"), (m.zero? ? nil : "#{m}m"), "#{s}s"].compact.join " "
-        deliver "[#{code}] #{title}\n#{fetch}. Next fetch in #{time} (#{nextf}).  [ #{feed} ]","<span style='font-size:small;'>[#{code}] #{title}<br/>#{fetch}. Next fetch in <b>#{time}</b> (#{nextf}).  <i>[ #{feed} ]</i></span>"
+        deliver "[#{code}] #{title}\n#{fetch}. Next fetch in #{time} (#{nextf}).  [ #{feed} ]","<span style='font-size: small;'>[#{code}] #{title}<br/>#{fetch}. Next fetch in <b>#{time}</b> (#{nextf}).  <i>[ <a href='#{feed}'>#{feed}</a> ]</i></span>"
       end
     rescue Exception => e
       deliver "errör: "+e.to_s, nil
