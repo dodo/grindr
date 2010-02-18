@@ -18,3 +18,14 @@
     It's using the standard xmpp4r library and my version of xmpp4r-observable .
     [ http://github.com/dodo/xmpp4r-observable ]
 
+= Example
+
+(04:53:12 PM) dodo: test
+(04:53:13 PM) dodo@superfeedr.com: Welcome to grindr! Type help for overview. Current mode is all.
+(04:53:13 PM) dodo@superfeedr.com: Yepp. I'm right here.
+(05:02:59 PM) dodo@superfeedr.com: 16:02:04
+// Posted [2010-02-18T16:02:04+00:00] from [Superfeedr] on [ http://superfeedr.com/?1266508924 ]
+Thursday February 18 16:02:04 UTC 2010 dodo wanted to know what time it was.
+(05:03:00 PM) dodo@superfeedr.com: [200] The Dummy Time Feed
+952 bytes fetched in 0.64s. Next fetch in 3m 38.30s (Thu Feb 18 17:06:38 +0100 2010). [ http://superfeedr.com/dummy.xml ]
+
