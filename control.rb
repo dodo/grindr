@@ -6,6 +6,8 @@ $manual = {:help => "help\nShow the list of all given commands and with a little
            :man => "man <cmd>\nShow a manual of the given command.",
            :mode => "mode <format>\nChange the formatting of the notifications.\n"+
                     "available formats:\n    title -- show only the titles.\n"+
+                    "    short -- show titles and fetch status.\n"+
+                    "    full -- show full entries. without fetch satus.\n"+
                     "    all -- show all given information.\n    ? -- show current mode.",
            :format => "format <on|off>\nSet xhtml formatting on or off."}
 
@@ -21,7 +23,6 @@ def gen_xhtml(text)
   h.add b
   [a, h]
 end
-
 
 class UserController
 
@@ -122,6 +123,8 @@ eos
     case m
       when "?"     then e=true;deliver "current mode is "+@mode.to_s, "current mode is <b>#{@mode.to_s}</b>"
       when "title" then @mode = :title
+      when "short" then @mode = :short
+      when "full"  then @mode = :full
       when "all"   then @mode = :all
       else e=true;deliver "mode #{m} not found.", "mode <b>#{m}</b> not found."
     end
@@ -166,21 +169,20 @@ eos
         item.entries.each do |entry|
           unless entry.to_s.strip.empty?
             a, syms = {}, [:title,:published,:content,:summary]
-            syms.each { |sym| a[sym] = entry.elements[sym.to_s].text.to_s unless entry.elements[sym.to_s].nil? }
+            syms.each { |sym| a[sym] = entry.elements[sym.to_s].nil? ? "" : entry.elements[sym.to_s].text.to_s }
             a[:author] = entry.elements["author"].nil? ? "unknown" : entry.elements["author"].elements["name"].text.to_s
             a[:link] = entry.elements["link"].nil? ? "empty" : entry.elements["link"].attributes["href"].to_s
-            a[:content] = a[:summary] if not a.has_key?(:content) && a.has_key?(:summary)
-            a[:content] = "" unless a.has_key? :content
+            a[:content] = a[:summary] if a[:content] == ""
             xcontent = a[:content] == "" ? "" : '<br/>'+a[:content]
-            
+
             deliver *case @mode
-              when :title then ["[#{a[:published]}] #{a[:title]} on [ #{a[:link]} ]","<span style='font-size:small;'>[#{a[:published]}]</span> #{a[:title]} <i>on [ #{a[:link]} ]</i>"]
-              when :all   then ["#{a[:title]}\n// Posted [#{a[:published]}] from [#{a[:author]}] on [ #{a[:link]} ]\n#{a[:content]}".strip.chomp,"#{a[:title]}<br/><span style='font-size:small;'>// Posted [#{a[:published]}] from [#{a[:author]}] <i>on [ #{a[:link]} ]</i></span>#{xcontent}".strip.chomp]
+              when :title, :short then ["[#{a[:published]}] #{a[:title]} on [ #{a[:link]} ]","<span style='font-size:small;'>[#{a[:published]}]</span> #{a[:title]} <i>on [ #{a[:link]} ]</i>"]
+              when :all, :full then ["#{a[:title]}\n// Posted [#{a[:published]}] from [#{a[:author]}] on [ #{a[:link]} ]\n#{a[:content]}".strip.chomp,"<b>#{a[:title]}</b><br/><span style='font-size:small;'>// Posted [#{a[:published]}] from [#{a[:author]}] <i>on [ #{a[:link]} ]</i></span>#{xcontent}".strip.chomp]
             end
           end
         end
       end
-      if @mode == :all
+      if [:all, :short].include? @mode
         status = event.elements["status"]
         title = status.elements["title"].text.to_s
         feed = status.attributes["feed"].to_s
@@ -189,7 +191,7 @@ eos
         code = status.elements["http"].attributes["code"].to_s
 
         diff, nextf = Time.parse(nextf) - Time.now(), Time.parse(nextf).to_s
-        h, m, s = diff.div(3600), diff.div(60), format("%.2f",diff % 60)
+        h, m, s = diff.div(3600), diff.div(60), "%.2f" % (diff % 60)
         time = [ (h.zero? ? nil : "#{h}h"), (m.zero? ? nil : "#{m}m"), "#{s}s"].compact.join " "
         deliver "[#{code}] #{title}\n#{fetch}. Next fetch in #{time} (#{nextf}).  [ #{feed} ]","<span style='font-size:small;'>[#{code}] #{title}<br/>#{fetch}. Next fetch in <b>#{time}</b> (#{nextf}).  <i>[ #{feed} ]</i></span>"
       end

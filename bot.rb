@@ -39,12 +39,17 @@ class Notifier
     @h.users.first[1].notify(event) if @h.users.any? ### FIXME
   end
 end
-
+class Blackhole
+  def update(what, event)
+  end
+end
 
 h = Handler.new
 n = Notifier.new(h)
+b = Blackhole.new
 $im.add_observer(:message, h)
 $im.add_observer(:event, n)
+$im.add_observer(:"stream:error", b)
 
 puts "Running"
 Thread.stop
