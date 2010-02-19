@@ -1,17 +1,17 @@
 = Name
 
-[grindr] -- a xmpp message feed accregator for superfeedr
+[grindr] -- a xmpp message feed aggregator for superfeedr
 
 = Synopsis
 
     ruby bot.rb <superfeedr-jid> <passwd>
-    # type help to <superfeedr-jid> to get it started. (or smth else ;P)
+    # type help to <superfeedr-jid> to get it started. (or sth else ;P)
 
 = Description
 
     [grindr] is an xmpp4r bot thats listening on superfeedr's xmpp pubsub api
     and parsing it to human readable message stanzas. It provides a little
-    interaction api to control the behavoir of the bot.
+    interaction api to control the behavior of the bot.
 
 = Install
 
