@@ -6,8 +6,6 @@ $manual = {:help => "help\nShow the list of all given commands and with a little
            :man => "man <cmd>\nShow a manual of the given command.",
            :mode => "mode <format>\nChange the formatting of the notifications.\n"+
                     "available formats:\n    title -- show only the titles.\n"+
-                    "    short -- show titles and fetch status.\n"+
-                    "    full -- show full entries. without fetch satus.\n"+
                     "    all -- show all given information.\n    ? -- show current mode.",
            :format => "format <on|off>\nSet xhtml formatting on or off."}
 
@@ -27,10 +25,10 @@ end
 class UserController
 
   def initialize(im, to)
-    @im, @to, @mode, @use_xhtml = im, to, :all, true
+    @im, @to, @mode, @use_xhtml, @use_status = im, to, :all, true, true
     puts "* add user "+to.to_s
     @methods = [:on,:off,:list,:help,:ping,:test,:easteregg]
-    @functions = [:man,:login,:add,:remove,:mode,:format]
+    @functions = [:man,:login,:add,:remove,:mode,:format,:status]
     deliver "Welcome to #{$bot_name}!\nType help for overview.\nCurrent mode is #{@mode.to_s}.","Welcome to <i>#{$bot_name}</i>!\nType <b>help</b> for overview.\nCurrent mode is <b>#{@mode.to_s}</b>."
   end
 
@@ -65,6 +63,7 @@ remove <feed> -- removing a feed
 mode <format> -- set notification format
 man <command> -- show a manual of the command
 format <on|off> -- set formatting on or off
+status <on|off> -- set status report on or off
 help -- show this help
 eos
     xhtml = <<eos
@@ -77,6 +76,7 @@ eos
 <b>mode &lt;format&gt;</b> -- set notification format<br/>
 <b>man &lt;command&gt;</b> -- show a manual of the command<br/>
 <b>format &lt;on|off&gt;</b> -- set formatting on or off<br/>
+<b>status &lt;on|off&gt;</b> -- set status report on or off<br/>
 <b>help</b> -- show this help
 eos
     deliver text[0..-2], xhtml[0..-2]
@@ -123,8 +123,6 @@ eos
     case m
       when "?"     then e=true;deliver "current mode is "+@mode.to_s, "current mode is <b>#{@mode.to_s}</b>"
       when "title" then @mode = :title
-      when "short" then @mode = :short
-      when "full"  then @mode = :full
       when "all"   then @mode = :all
       else e=true;deliver "mode #{m} not found.", "mode <b>#{m}</b> not found."
     end
@@ -140,6 +138,17 @@ eos
       else e=true;deliver "format #{f} not found.", "format <b>#{f}</b> not found."
     end
     deliver "set formatting " + f, "set formatting <b>#{f}</b>" unless e
+  end
+
+  def status(s="?")
+    e, s = false, @use_status&&"on"||!@use_status&&"off"
+    case s
+      when "?"   then e=true;deliver "current status is "+s, "current status is <b>#{s}</b>"
+      when "off" then @use_status = false
+      when "on"  then @use_status = true
+      else e=true;deliver "status #{s} not found.", "status <b>#{s}</b> not found."
+    end
+    deliver "set status report " + s, "set status report <b>#{s}</b>" unless e
   end
 
   def man(cmd)
@@ -172,17 +181,18 @@ eos
             syms.each { |sym| a[sym] = entry.elements[sym.to_s].nil? ? "" : entry.elements[sym.to_s].text.to_s }
             a[:author] = entry.elements["author"].nil? ? "unknown" : entry.elements["author"].elements["name"].text.to_s
             a[:link] = entry.elements["link"].nil? ? "empty" : entry.elements["link"].attributes["href"].to_s
-            a[:content] = a[:summary] if a[:content] == ""
-            xcontent = a[:content] == "" ? "" : '<br/>'+a[:content]
+            a[:published] = Time.parse(a[:published]).to_s unless a[:published].empty?
+            a[:content] = a[:summary] if a[:content].empty?
+            xcontent = a[:content].empty? ? "" : '<br/>'+a[:content]
 
             deliver *case @mode
-              when :title, :short then ["[#{a[:published]}] #{a[:title]} on [ #{a[:link]} ]","<span style='font-size: small;'>[#{a[:published]}]</span> #{a[:title]} <i>on [ <a href='#{a[:link]}'>#{a[:link]}</a> ]</i>"]
-              when :all, :full then ["#{a[:title]}\n// Posted [#{a[:published]}] from [#{a[:author]}] on [ #{a[:link]} ]\n#{a[:content]}".strip.chomp,"<b>#{a[:title]}</b><span style='font-size: small;'><br/>\n// Posted [#{a[:published]}] from [#{a[:author]}] <i>on [ <a href='#{a[:link]}'>#{a[:link]}</a> ]</i></span>\n#{xcontent}".strip.chomp]
+              when :title then ["[#{a[:published]}]   #{a[:title]}   on [ #{a[:link]} ]","<span style='font-size: small;'>[#{a[:published]}]</span> &nbsp; #{a[:title]} &nbsp; <span style='font-size: small;'><i>on [ <a href='#{a[:link]}'>#{a[:link]}</a> ]</i></span>"]
+              when :all then ["#{a[:title]}\n// Posted [#{a[:published]}] from [#{a[:author]}] on [ #{a[:link]} ]\n#{a[:content]}".strip.chomp,"<b>#{a[:title]}</b><span style='font-size: small;'><br/>\n// Posted [#{a[:published]}] from [#{a[:author]}] <i>on [ <a href='#{a[:link]}'>#{a[:link]}</a> ]</i></span>\n#{xcontent}".strip.chomp]
             end
           end
         end
       end
-      if [:all, :short].include? @mode
+      if @use_status
         status = event.elements["status"]
         title = status.elements["title"].text.to_s
         feed = status.attributes["feed"].to_s
