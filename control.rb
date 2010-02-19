@@ -141,9 +141,9 @@ eos
   end
 
   def status(s="?")
-    e, s = false, @use_status&&"on"||!@use_status&&"off"
+    e, o = false, @use_status&&"on"||!@use_status&&"off"
     case s
-      when "?"   then e=true;deliver "current status is "+s, "current status is <b>#{s}</b>"
+      when "?"   then e=true;deliver "current status is "+o, "current status is <b>#{o}</b>"
       when "off" then @use_status = false
       when "on"  then @use_status = true
       else e=true;deliver "status #{s} not found.", "status <b>#{s}</b> not found."
