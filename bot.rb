@@ -5,7 +5,7 @@ puts "starting ..."
 require 'xmpp4r-observable'
 require 'control'
 
-#Jabber::debug = true
+Jabber::debug = true
 
 unless ['private', 'public'].include? CONFIG['mode']
   puts "Mode not right configured.","your: #{CONFIG['mode']}","should: private or public"
@@ -66,7 +66,7 @@ class Notifier
     p "arrived", @h.users.any?
     case CONFIG['mode']
       when 'private' then @h.users.first[1].notify(event) if @h.users.any?
-      when 'public'  then @h.users.each { |user| user.notify(event) } ### FIXME add user specific notifications
+      when 'public'  then @h.users.values.each { |user| user.notify(event) } ### FIXME add user specific notifications
     end
   end
 end
