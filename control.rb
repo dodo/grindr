@@ -1,13 +1,17 @@
 require 'xmpp4r/dataforms'
 require 'time'
+require 'yaml'
 
-$bot_name = "grindr"
 $manual = {:help => "help\nShow the list of all given commands and with a little description.",
            :man => "man <cmd>\nShow a manual of the given command.",
            :mode => "mode <format>\nChange the formatting of the notifications.\n"+
                     "available formats:\n    title -- show only the titles.\n"+
                     "    all -- show all given information.\n    ? -- show current mode.",
            :format => "format <on|off>\nSet xhtml formatting on or off."}
+
+def load_config
+  YAML.load File.new('config.yaml')
+end
 
 def gen_xhtml(text)
   h = REXML::Element.new "html"
@@ -22,14 +26,20 @@ def gen_xhtml(text)
   [a, h]
 end
 
+CONFIG = load_config
+
 class UserController
 
   def initialize(im, to)
-    @im, @to, @mode, @use_xhtml, @use_status = im, to, :all, true, true
+    @im, @to, @mode = im, to, CONFIG['default']['mode'].to_sym
+    @use_xhtml  = CONFIG['default']['use xhtml']
+    @use_status = CONFIG['default']['use status']
     puts "* add user "+to.to_s
     @methods = [:on,:off,:list,:help,:ping,:test,:easteregg]
     @functions = [:man,:login,:add,:remove,:mode,:format,:status]
-    deliver "Welcome to #{$bot_name}!\nType help for overview.\nCurrent mode is #{@mode.to_s}.","Welcome to <i>#{$bot_name}</i>!\nType <b>help</b> for overview.\nCurrent mode is <b>#{@mode.to_s}</b>."
+    plain = "Welcome to #{CONFIG['name']}! Type help for overview. Current mode is #{@mode.to_s}."
+    xhtml = "Welcome to <i>#{CONFIG['name']}</i>! Type <b>help</b> for overview. Current mode is <b>#{@mode.to_s}</b>."
+    deliver plain, xhtml
   end
 
   def deliver(text, xhtml)
@@ -54,7 +64,7 @@ class UserController
 
   def help
     text = <<eos
-[#{$bot_name}] Commands:
+[#{CONFIG['name']}] Commands:
 list -- listing feeds
 on -- enable notifications
 off -- disable notification
@@ -67,7 +77,7 @@ status <on|off> -- set status report on or off
 help -- show this help
 eos
     xhtml = <<eos
-[#{$bot_name}] Commands:<br/>
+[#{CONFIG['name']}] Commands:<br/>
 <b>list</b> -- listing feeds<br/>
 <b>on</b> -- enable notifications<br/>
 <b>off</b> -- disable notification<br/>
@@ -177,17 +187,24 @@ eos
       event.elements["items"].items.each do |item|
         item.entries.each do |entry|
           unless entry.to_s.strip.empty?
-            a, syms = {}, [:title,:published,:content,:summary]
+            a, b, syms = {}, {}, [:title,:published,:content,:summary]
             syms.each { |sym| a[sym] = entry.elements[sym.to_s].nil? ? "" : entry.elements[sym.to_s].text.to_s }
             a[:author] = entry.elements["author"].nil? ? "unknown" : entry.elements["author"].elements["name"].text.to_s
             a[:link] = entry.elements["link"].nil? ? "empty" : entry.elements["link"].attributes["href"].to_s
             a[:published] = Time.parse(a[:published]).to_s unless a[:published].empty?
             a[:content] = a[:summary] if a[:content].empty?
-            xcontent = a[:content].empty? ? "" : '<br/>'+a[:content]
+            xcontent = a[:content].empty? ? "" : '<br/>'+a[:content].gsub("&", "&amp;")
 
+            a.each {|key, value| b[key] = value.gsub("&", "&amp;") }
             deliver *case @mode
-              when :title then ["[#{a[:published]}]   #{a[:title]}   on [ #{a[:link]} ]","<span style='font-size: small;'>[#{a[:published]}]</span> &nbsp; #{a[:title]} &nbsp; <span style='font-size: small;'><i>on [ <a href='#{a[:link]}'>#{a[:link]}</a> ]</i></span>"]
-              when :all then ["#{a[:title]}\n// Posted [#{a[:published]}] from [#{a[:author]}] on [ #{a[:link]} ]\n#{a[:content]}".strip.chomp,"<b>#{a[:title]}</b><span style='font-size: small;'><br/>\n// Posted [#{a[:published]}] from [#{a[:author]}] <i>on [ <a href='#{a[:link]}'>#{a[:link]}</a> ]</i></span>\n#{xcontent}".strip.chomp]
+              when :title then
+                plain = "[#{a[:published]}]   #{a[:title]}   on [ #{a[:link]} ]"
+                xhtml = "<span style='font-size: small;'>[#{b[:published]}]</span>  <b>#{b[:title]}</b>  <span style='font-size: small;'><i>on [ <a href='#{b[:link]}'>#{b[:link]}</a> ]</i></span>"
+                [plain,xhtml]
+              when :all then
+                plain = "#{a[:title]}\n// Posted [#{a[:published]}] from [#{a[:author]}] on [ #{a[:link]} ]\n#{a[:content]}".strip.chomp
+                xhtml = "<b>#{b[:title]}</b><span style='font-size: small;'><br/>\n// Posted [#{b[:published]}] from [#{b[:author]}] <i>on [ <a href='#{b[:link]}'>#{b[:link]}</a> ]</i></span>\n#{xcontent}".strip.chomp
+                [plain,xhtml]
             end
           end
         end

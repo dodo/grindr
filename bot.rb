@@ -3,14 +3,15 @@
 require 'xmpp4r-observable'
 require 'control'
 
+CONFIG = load_config
 Jabber::debug = true
 
-if ARGV.size < 2
-  puts "Usage: #{$0} <superfeedr-jid> <superfeedr-password>"
-  exit
+unless ['private', 'public'].include? CONFIG['mode']
+  puts "Mode not right configured.","your: #{CONFIG['mode']}","should: private or public"
+  exit 1
 end
 
-jid, pw = ARGV[0], ARGV[1]
+jid, pw = CONFIG['jid'], CONFIG['password']
 jid = "#{jid}@superfeedr.com" unless jid.index('@')
 
 $im = Jabber::Observable.new(jid, pw)
@@ -24,8 +25,12 @@ class Handler
   def update(what, msg)
     text = msg.body.strip
     from = msg.from.node + "@" + msg.from.domain
-    @users[from] = UserController.new($im, msg.from) unless @users.has_key? from
+    add_user(msg.from) unless @users.has_key? from
     @users[from].receive(text) unless text.start_with? "?OTR"
+  end
+  def add_user(jid)
+    from = jid.node + "@" + jid.domain
+    @users[from] = UserController.new($im, jid)
   end
 end
 
@@ -36,7 +41,10 @@ class Notifier
   end
   def update(what, event)
     p "arrived", @h.users.any?
-    @h.users.first[1].notify(event) if @h.users.any? ### FIXME
+    case CONFIG['mode']
+      when 'private' then @h.users.first[1].notify(event) if @h.users.any?
+      when 'public'  then @h.users.each { |user| user.notify(event) } ### FIXME add user specific notifications
+    end
   end
 end
 class Blackhole
@@ -47,9 +55,10 @@ end
 h = Handler.new
 n = Notifier.new(h)
 b = Blackhole.new
+h.add_user(Jabber::JID.new(CONFIG['private']['jid'])) if CONFIG['mode'] == 'private'
 $im.add_observer(:message, h)
 $im.add_observer(:event, n)
-$im.add_observer(:"stream:error", b)
+$im.add_observer(:"stream:error", b) # hehe .. well .. i tried it .. :p
 
 puts "Running"
 Thread.stop
