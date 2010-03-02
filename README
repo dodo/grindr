@@ -4,8 +4,8 @@
 
 = Synopsis
 
-    ruby bot.rb <superfeedr-jid> <passwd>
-    # type help to <superfeedr-jid> to get it started. (or sth else ;P)
+    ruby bot.rb
+    # type help to <bot-jid> to get it started. (or sth else ;P)
 
 = Description
 
@@ -17,15 +17,21 @@
 
     It's using the standard xmpp4r library and my version of xmpp4r-observable .
     [ http://github.com/dodo/xmpp4r-observable ]
+    and YAML.
+    Remove '.default' from config.yaml.default and edit it as you wish.
 
 = Example
 
-(04:53:12 PM) dodo: test
-(04:53:13 PM) dodo@superfeedr.com: Welcome to grindr! Type help for overview. Current mode is all.
-(04:53:13 PM) dodo@superfeedr.com: Yepp. I'm right here.
-(05:02:59 PM) dodo@superfeedr.com: 16:02:04
-// Posted [2010-02-18T16:02:04+00:00] from [Superfeedr] on [ http://superfeedr.com/?1266508924 ]
-Thursday February 18 16:02:04 UTC 2010 dodo wanted to know what time it was.
-(05:03:00 PM) dodo@superfeedr.com: [200] The Dummy Time Feed
-952 bytes fetched in 0.64s. Next fetch in 3m 38.30s (Thu Feb 18 17:06:38 +0100 2010). [ http://superfeedr.com/dummy.xml ]
+[06:05:56 AM] dodo: test
+[06:05:57 AM] gringr: Welcome to gringr! You're just an unregistered Stranger. Type help for overview.
+[06:05:57 AM] gringr: Yepp. I'm right here.
+[06:05:58 AM] dodo: register
+[06:05:59 AM] gringr: Before you're registered I want to confirm that you're a REAL self thinking organismn.
+Please just answer this little question:
+What is the sum of 84 and 55?
+[06:06:08 AM] dodo: 139
+[06:06:08 AM] gringr: Congratulations! You're now a registered user.
+[06:11:02 AM] gringr: [Tue Mar 02 06:10:49 +0100 2010]   05:10:49   on [ http://superfeedr.com/?1267506649 ]
+[06:11:03 AM] gringr: [200] The Dummy Time Feed
+948 bytes fetched in 0.05s. Next fetch in 1m 21.28s (Tue Mar 02 06:12:24 +0100 2010).  [ http://superfeedr.com/dummy.xml ]
 
