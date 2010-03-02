@@ -13,33 +13,13 @@ def load_config
   YAML.load File.new('config.yaml')
 end
 
-def gen_xhtml(text)
-  h = REXML::Element.new "html"
-  h.add_namespace 'http://jabber.org/protocol/xhtml-im'
-  b = REXML::Element.new "body"
-  b.add_namespace 'http://www.w3.org/1999/xhtml'
-  a = REXML::Element.new "active"
-  a.add_namespace 'http://jabber.org/protocol/chatstates'
-  t = REXML::Text.new text, false, nil, true, nil, %r/.^/
-  b.add t
-  h.add b
-  [a, h]
-end
-
 CONFIG = load_config
 
-class UserController
 
-  def initialize(im, to)
-    @im, @to, @mode = im, to, CONFIG['default']['mode'].to_sym
-    @use_xhtml  = CONFIG['default']['use xhtml']
-    @use_status = CONFIG['default']['use status']
-    puts "* add user "+to.to_s
-    @methods = [:on,:off,:list,:help,:ping,:test,:easteregg]
-    @functions = [:man,:login,:add,:remove,:mode,:format,:status]
-    plain = "Welcome to #{CONFIG['name']}! Type help for overview. Current mode is #{@mode.to_s}."
-    xhtml = "Welcome to <i>#{CONFIG['name']}</i>! Type <b>help</b> for overview. Current mode is <b>#{@mode.to_s}</b>."
-    deliver plain, xhtml
+class User
+
+  def initialize(im, to, methods=[], functions=[])
+    @im, @to, @methods, @functions = im, to, methods, functions
   end
 
   def deliver(text, xhtml)
@@ -60,6 +40,125 @@ class UserController
     rescue Exception => e
       deliver "an error occurred:\n"+e.to_s, nil
     end
+  end
+
+  private
+
+  def gen_xhtml(text)
+    h = REXML::Element.new "html"
+    h.add_namespace 'http://jabber.org/protocol/xhtml-im'
+    b = REXML::Element.new "body"
+    b.add_namespace 'http://www.w3.org/1999/xhtml'
+    a = REXML::Element.new "active"
+    a.add_namespace 'http://jabber.org/protocol/chatstates'
+    t = REXML::Text.new text, false, nil, true, nil, %r/.^/
+    b.add t
+    h.add b
+    [a, h]
+  end
+
+end
+
+
+class Unregistered < User
+
+  def initialize(handler, im, to)
+    @handler, @register_state = handler, false
+    puts "* recognizing stranger "+to.to_s
+    m = [:info,:help,:ping,:test,:register]
+    super im, to, m
+    deliver "Welcome to #{CONFIG['name']}! You're just an unregistered Stranger. Type help for overview."
+  end
+
+  def deliver(text, _ = nil)
+    super(text, nil) # disabled xhtml for unregistered users
+  end
+
+  def receive(msg)
+    if registering?
+        finish_register if check_register msg
+        @register_state = false  
+      else
+        super
+    end
+  end
+
+  def register
+    @a, @b = 23, 19
+    while @a + @b == 42
+      @a = 1 + rand(100)
+      @b = 1 + rand(100)
+    end
+    deliver "[REGISTERINFO]" ###FIXME
+    deliver "Before you're registered I want to confirm that you're a REAL self thinking organismn.\nPlease just answer this little question:\nWhat is the sum of #{@a} and #{@b}?"
+    @register_state = true
+  end
+
+  def check_register(msg)
+    if ["42","fourtytwo","fourty two","fourty-two"].include? msg.chomp.downcase
+        deliver "Good try. <3"
+        result = false
+      else
+        result = msg.to_i == @a + @b
+        deliver "Your answer is incorrect." unless result
+    end
+    result
+  end
+
+  def finish_register
+    @handler.remove_stranger @to
+    @handler.add_user @to, false
+    deliver "Congratulations! You're now a registered user."
+  end
+
+  def ping
+    deliver "pong"
+  end
+
+  def test
+    deliver "Yepp. I'm right here."
+  end
+
+  def help
+    text = <<eos
+[#{CONFIG['name']}] Commands:
+info -- show infos about this service
+help -- show this help
+register -- try this to get registered
+eos
+    deliver text[0..-2]
+  end
+
+  def info ##FIXME
+    text = <<eos
+[#{CONFIG['name']}] -- superfeedr message passing service bot:
+[BOTINFO]
+eos
+    deliver text[0..-2]
+  end
+
+  private
+
+  def registering?
+    @register_state
+  end
+
+end
+
+
+class Registered < User
+
+  def initialize(im, to, welcome = true)
+    @mode       = CONFIG['default']['mode'].to_sym
+    @use_xhtml  = CONFIG['default']['use xhtml']
+    @use_status = CONFIG['default']['use status']
+    puts "* add user "+to.to_s
+    m = [:on,:off,:list,:help,:ping,:test,:easteregg]
+    f = [:man,:login,:add,:remove,:mode,:format,:status]
+    super im, to, m, f
+    plain = "Welcome to #{CONFIG['name']}! Type help for overview. Current mode is #{@mode.to_s}."
+    xhtml = "Welcome to <i>#{CONFIG['name']}</i>! Type <b>help</b> for overview. Current mode is <b>#{@mode.to_s}</b>."
+    deliver plain, xhtml if welcome
   end
 
   def help

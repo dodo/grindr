@@ -7,11 +7,11 @@ mode:         <private|public>          # should be public or private
 private: # only the given jabber id will receive stanzas from the bot
   jid:        <someone@axmppserver.dom> # mostly your jabber-id
 
-public: # starts the bot as a service for many users
+public:  # starts the bot as a service for many users
   jid:        <someone@axmppserver.dom> # the jid which from the bot will be working
   password:   <somethingverysecret>     # your password for the worker jid
 
-default:      # default settings
+default: # default settings
   mode:       all                       # all or title are implemented
   use xhtml:  true                      # enables xhtml stanzas
   use status: true                      # enables fetch status
