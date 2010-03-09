@@ -3,20 +3,8 @@
 puts "starting ..."
 
 require 'xmpp4r-observable'
+require 'load'
 require 'control'
-
-Jabber::debug = true
-
-unless ['private', 'public'].include? CONFIG['mode']
-  puts "Mode not right configured.","your: #{CONFIG['mode']}","should: private or public"
-  exit 1
-end
-
-jid, pw = CONFIG['jid'], CONFIG['password']
-jid = "#{jid}@superfeedr.com" unless jid.index('@')
-
-$im = Jabber::Observable.new(jid, pw)
-$im.status :xa, 'At your service!'
 
 class Handler
   attr_reader :users
@@ -41,13 +29,17 @@ class Handler
     end
   end
   def add_stranger(jid)
-    @strangers[from jid] = Unregistered.new(self, $im, jid)
+    @strangers[from jid] = Unregistered.new(self, $public, jid)
   end
   def remove_stranger(jid)
     @strangers.delete from(jid)
   end
   def add_user(jid, welcome = true)
-    @users[from jid] = Registered.new($im, jid, welcome)
+    case CONFIG['mode']
+      when 'public'  then user, im = Registered, $public
+      when 'private' then user, im = Private   , $im
+    end
+    @users[from jid] = user.new(im, jid, welcome)
   end
 
   private
@@ -75,27 +67,43 @@ class Blackhole
   end
 end
 
-h = Handler.new
-n = Notifier.new(h)
-b = Blackhole.new
-h.add_user(Jabber::JID.new(CONFIG['private']['jid'])) if CONFIG['mode'] == 'private'
-case CONFIG['mode']
-  when 'private' then $im.add_observer(:message, h)
-  when 'public'  then
-   begin
-     jid, pw = CONFIG['public']['jid'], CONFIG['public']['password']
-     if jid == CONFIG['jid']
-         $im.add_observer(:message, h)
-       else
-         $public = Jabber::Observable.new(jid, pw)
-         $public.status :xa, 'At your service!'
-         $public.add_observer(:message, h)
-         $public.add_observer(:"stream:error", b)
-     end
-   end
-end
-$im.add_observer(:event, n)
-$im.add_observer(:"stream:error", b) # hehe .. well .. i tried it .. :p
+################################################################################
 
-puts "* Running"
-Thread.stop
+begin
+  Jabber::debug = true
+
+  jid, pw = CONFIG['jid'], CONFIG['password']
+  jid = "#{jid}@superfeedr.com" unless jid.index('@')
+
+  $im = Jabber::Observable.new(jid, pw)
+  $im.status :xa, 'At your service!'
+
+  h = Handler.new
+  n = Notifier.new(h)
+  b = Blackhole.new
+  h.add_user(Jabber::JID.new(CONFIG['private']['jid'])) if CONFIG['mode'] == 'private'
+  case CONFIG['mode']
+    when 'private' then $im.add_observer(:message, h)
+    when 'public'  then
+     begin
+       jid, pw = CONFIG['public']['jid'], CONFIG['public']['password']
+       if jid == CONFIG['jid']
+           $im.add_observer(:message, h)
+           $public = $im
+         else
+           $public = Jabber::Observable.new(jid, pw)
+           $public.status :xa, 'At your service!'
+           $public.add_observer(:message, h)
+           $public.add_observer(:"stream:error", b)
+       end
+     end
+  end
+  $im.add_observer(:event, n)
+  $im.add_observer(:"stream:error", b) # hehe .. well .. i tried it .. :p
+
+  puts "* Running"
+  Thread.stop
+ensure
+  puts "... stopping"
+  DB.close
+end

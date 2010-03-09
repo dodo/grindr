@@ -1,6 +1,6 @@
 require 'xmpp4r/dataforms'
 require 'time'
-require 'yaml'
+require 'load'
 
 $manual = {:help => "help\nShow the list of all given commands and with a little description.",
            :man => "man <cmd>\nShow a manual of the given command.",
@@ -9,17 +9,10 @@ $manual = {:help => "help\nShow the list of all given commands and with a little
                     "    all -- show all given information.\n    ? -- show current mode.",
            :format => "format <on|off>\nSet xhtml formatting on or off."}
 
-def load_config
-  YAML.load File.new('config.yaml')
-end
-
-CONFIG = load_config
-
-
 class User
 
   def initialize(im, to, methods=[], functions=[])
-    @im, @to, @methods, @functions = im, to, methods, functions
+    @im,@to,@methods,@functions,@use_xhtml = im,to,methods,functions,false
   end
 
   def deliver(text, xhtml)
@@ -106,8 +99,12 @@ class Unregistered < User
   end
 
   def finish_register
+    begin
     @handler.remove_stranger @to
     @handler.add_user @to, false
+    rescue Exception => e
+      deliver "an error occurred:\n"+e.to_s
+    end
     deliver "Congratulations! You're now a registered user."
   end
 
@@ -146,19 +143,27 @@ eos
 end
 
 
-class Registered < User
+class Private < User
 
   def initialize(im, to, welcome = true)
-    @mode       = CONFIG['default']['mode'].to_sym
-    @use_xhtml  = CONFIG['default']['use xhtml']
-    @use_status = CONFIG['default']['use status']
     puts "* add user "+to.to_s
     m = [:on,:off,:list,:help,:ping,:test,:easteregg]
     f = [:man,:login,:add,:remove,:mode,:format,:status]
     super im, to, m, f
+    @mode       = get('mode').to_sym
+    @use_xhtml  = get 'use xhtml'
+    @use_status = get 'use status'
     plain = "Welcome to #{CONFIG['name']}! Type help for overview. Current mode is #{@mode.to_s}."
     xhtml = "Welcome to <i>#{CONFIG['name']}</i>! Type <b>help</b> for overview. Current mode is <b>#{@mode.to_s}</b>."
     deliver plain, xhtml if welcome
+  end
+
+  def get(key)
+    DB.get @to.to_s, key
+  end
+
+  def set(key, value)
+    DB.set @to.to_s, key, value
   end
 
   def help
@@ -235,6 +240,7 @@ eos
       when "all"   then @mode = :all
       else e=true;deliver "mode #{m} not found.", "mode <b>#{m}</b> not found."
     end
+    set 'mode', @mode.to_s
     deliver "set mode to " + m, "set mode to <b>#{m}</b>" unless e
   end
 
@@ -244,6 +250,7 @@ eos
       when "?"   then e=true;deliver "current formatting is "+s, "current formatting is <b>#{s}</b>"
       when "off" then @use_xhtml = false
       when "on"  then @use_xhtml = true
+      set 'use xhtml', @use_xhtml
       else e=true;deliver "format #{f} not found.", "format <b>#{f}</b> not found."
     end
     deliver "set formatting " + f, "set formatting <b>#{f}</b>" unless e
@@ -255,6 +262,7 @@ eos
       when "?"   then e=true;deliver "current status is "+o, "current status is <b>#{o}</b>"
       when "off" then @use_status = false
       when "on"  then @use_status = true
+      set 'use status', @use_status
       else e=true;deliver "status #{s} not found.", "status <b>#{s}</b> not found."
     end
     deliver "set status report " + s, "set status report <b>#{s}</b>" unless e
@@ -324,6 +332,15 @@ eos
     rescue Exception => e
       deliver "errör: "+e.to_s, nil
     end
+  end
+
+end
+
+class Registered < Private
+
+  def initialize(im, to, welcome = true)
+    DB.create to.to_s
+    super
   end
 
 end
