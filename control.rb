@@ -7,6 +7,8 @@ $manual = {:help => "help\nShow the list of all given commands and with a little
            :mode => "mode <format>\nChange the formatting of the notifications.\n"+
                     "available formats:\n    title -- show only the titles.\n"+
                     "    all -- show all given information.\n    ? -- show current mode.",
+           :add => "add <feedurl>\nSubscribe to given feedurl.\nSeperate multiple feeds by space.",
+           :remove => "remove <feedurl>\nUnsubscribe from given feedurl.\nSeperate multiple feeds by space.",
            :format => "format <on|off>\nSet xhtml formatting on or off."}
 
 class User
@@ -18,7 +20,11 @@ class User
   def deliver(text, xhtml)
     xhtml = nil unless @use_xhtml
     x = xhtml.nil? ? nil : gen_xhtml(xhtml)
-    @im.deliver @to, text, :chat, x
+    @im.deliver @to, text, x
+  end
+
+  def iscomposing
+    @im.iscomposing @to
   end
 
   def receive(msg)
@@ -148,7 +154,7 @@ class Private < User
   def initialize(im, to, welcome = true)
     puts "* add user "+to.to_s
     m = [:on,:off,:list,:help,:ping,:test,:easteregg]
-    f = [:man,:login,:add,:remove,:mode,:format,:status]
+    f = [:man,:add,:remove,:mode,:format,:status]
     super im, to, m, f
     @mode       = get('mode').to_sym
     @use_xhtml  = get 'use xhtml'
@@ -197,7 +203,14 @@ eos
   end
 
   def list
-    deliver "not yet implemented.", nil
+    deliver "requesting feeds ...", nil
+    iscomposing
+    Superfeedr.subscriptions do |page, feeds|
+      unless feeds.empty? && page != 1
+        f = feeds.empty? ? "no feeds" : feeds.join("\n")
+        deliver "Feeds:   [page #{page}]\n#{f}", nil
+      end
+    end
   end
 
   def on
@@ -208,28 +221,22 @@ eos
     deliver "not yet implemented.", nil
   end
 
-  def add(feed)
-    deliver "not yet implemented.", nil
+  def add(*feedlist)
+    deliver "requesting subscription ...", nil
+    iscomposing
+    Superfeedr.subscribe(feedlist) do |feeds|
+      f = feeds.empty? ? "no feeds" : feeds.join("\n")
+      deliver "subscribed to:\n#{f}", nil
+    end
   end
 
-  def remove(feed)
-    deliver "not yet implemented.", nil
-  end
-
-  def login(jid) # why does it not working? :(
-    jid = "#{jid}@superfeedr.com" unless jid.index('@')
-    deliver "try to login to "+jid, nil
-
-    msg = Jabber::Message.new @to
-    x = Jabber::Dataforms::XData.new
-    f = Jabber::Dataforms::XDataField.new
-    f.label= "password"
-    f.type= :text_private
-    x.type= :form
-    x.add f
-    msg.add x
-    p msg.to_s
-    @im.send! msg
+  def remove(*feedlist)
+    deliver "requesting unsubscription ...", nil
+    iscomposing
+    Superfeedr.unsubscribe(feedlist) do |feeds|
+      f = feeds.empty? ? "no feeds" : feeds.join("\n")
+      deliver "unsubscribed from:\n#{f}", nil
+    end
   end
 
   def mode(m="?")

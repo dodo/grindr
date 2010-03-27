@@ -58,21 +58,30 @@ class Client
   def status(presence, message)
     @presence = presence
     @status_message = message
-    stat_msg = Jabber::Presence.new(@presence, @status_message)
+    stat_msg = Jabber::Presence.new @presence, @status_message
     send!(stat_msg)
   end
 
-  def deliver(jid, message, type=:chat, xhtml=nil)
-    msg = Jabber::Message.new(jid, message)
+  def deliver(jid, message, xhtml=nil, type=:chat, state=:active)
+    msg = Jabber::Message.new jid, message
     unless xhtml.nil?
       if xhtml.is_a? Array
           xhtml.each { |elem| msg.add_element(elem) }
         else
-          msg.add_element(xhtml)
+          msg.add_element xhtml
       end
     end
+    msg.chat_state = state
     msg.type = type
-    send!(msg)
+    send! msg
+  end
+
+  def iscomposing(jid, type=:chat)
+    msg = Jabber::Message.new jid
+    msg.chat_state = :composing
+    msg.type = type
+    msg.from = @jid
+    send! msg
   end
 
   def add_message_callback(&block)
