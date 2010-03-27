@@ -15,9 +15,12 @@
 
 = Install
 
-    It's using the standard xmpp4r library and my version of xmpp4r-observable .
-    [ http://github.com/dodo/xmpp4r-observable ]
+    It's using the standard xmpp4r library and superfeedr-ruby.
+    [ http://github.com/superfeedr/superfeedr-ruby/ ]
+    [ http://home.gna.org/xmpp4r/ ]
     and YAML.
+    install all dependencies preferably with rubygems:
+        sudo gem install xmpp4r superfeedr-ruby
     Remove '.default' from config.yaml.default and edit it as you wish.
 
 = Example
