@@ -288,49 +288,48 @@ eos
     deliver "You found it ;P", "<span style='font-size: small;'>You found it ;P</span>"
   end
 
-  def notify(event)
+  def notify(notification)
     p "here too"
     begin
-      event.elements["items"].items.each do |item|
-        item.entries.each do |entry|
-          unless entry.to_s.strip.empty?
-            a, b, syms = {}, {}, [:title,:published,:content,:summary]
-            syms.each { |sym| a[sym] = entry.elements[sym.to_s].nil? ? "" : entry.elements[sym.to_s].text.to_s }
-            a[:author] = entry.elements["author"].nil? ? "unknown" : entry.elements["author"].elements["name"].text.to_s
-            a[:link] = entry.elements["link"].nil? ? "empty" : entry.elements["link"].attributes["href"].to_s
-            a[:published] = Time.parse(a[:published]).to_s unless a[:published].empty?
-            a[:content] = a[:summary] if a[:content].empty?
-            xcontent = a[:content].empty? ? "" : '<br/>'+a[:content].gsub("&", "&amp;")
+      notification.entries.each do |entry|
+        unless entry.to_s.strip.empty?
+          p entry, entry.to_s, entry.methods
+          a, b, syms = {}, {}, {}
+          a[:title] = entry.title.to_s
+          a[:author] = entry.authors.empty? ? "unknown" : entry.authors.map{|a|a.name}.join(", ")
+          a[:link] = entry.links.empty? ? "empty" : entry.links.first.href.to_s # FIXME extract more infos ..
+          a[:published] = entry.published.to_s
+          a[:content] = entry.summary
+          xcontent = a[:content].empty? ? "" : '<br/>'+a[:content].gsub("&", "&amp;")
 
-            a.each {|key, value| b[key] = value.gsub("&", "&amp;") }
-            deliver *case @mode
-              when :title then
-                plain = "[#{a[:published]}]   #{a[:title]}   on [ #{a[:link]} ]"
-                xhtml = "<span style='font-size: small;'>[#{b[:published]}]</span>  <b>#{b[:title]}</b>  <span style='font-size: small;'><i>on [ <a href='#{b[:link]}'>#{b[:link]}</a> ]</i></span>"
-                [plain,xhtml]
-              when :all then
-                plain = "#{a[:title]}\n// Posted [#{a[:published]}] from [#{a[:author]}] on [ #{a[:link]} ]\n#{a[:content]}".strip.chomp
-                xhtml = "<b>#{b[:title]}</b><span style='font-size: small;'><br/>\n// Posted [#{b[:published]}] from [#{b[:author]}] <i>on [ <a href='#{b[:link]}'>#{b[:link]}</a> ]</i></span>\n#{xcontent}".strip.chomp
-                [plain,xhtml]
-            end
+          a.each {|k,v| b[k] = v.gsub("&", "&amp;") }
+          deliver *case @mode
+            when :title then
+              plain = "[#{a[:published]}]   #{a[:title]}   on [ #{a[:link]} ]"
+              xhtml = "<span style='font-size: small;'>[#{b[:published]}]</span>  <b>#{b[:title]}</b>  <span style='font-size: small;'><i>on [ <a href='#{b[:link]}'>#{b[:link]}</a> ]</i></span>"
+              [plain,xhtml]
+            when :all then
+              plain = "#{a[:title]}\n// Posted [#{a[:published]}] from [#{a[:author]}] on [ #{a[:link]} ]\n#{a[:content]}".strip.chomp
+              xhtml = "<b>#{b[:title]}</b><span style='font-size: small;'><br/>\n// Posted [#{b[:published]}] from [#{b[:author]}] <i>on [ <a href='#{b[:link]}'>#{b[:link]}</a> ]</i></span>\n#{xcontent}".strip.chomp
+              [plain,xhtml]
           end
         end
       end
       if @use_status
-        status = event.elements["status"]
-        title = status.elements["title"].text.to_s
-        feed = status.attributes["feed"].to_s
-        nextf = status.elements["next_fetch"].text.to_s
-        fetch = status.elements["http"].text.to_s
-        code = status.elements["http"].attributes["code"].to_s
+        title = notification.message_status
+        feed = notification.feed_url
+        nextf = notification.next_fetch
+        fetch = "[this text is gone :(]"
+        code = notification.http_status
 
-        diff, nextf = Time.parse(nextf) - Time.now(), Time.parse(nextf).to_s
+        diff, nextf = nextf - Time.now(), nextf.to_s
         h, m, s = diff.div(3600), diff.div(60), "%.2f" % (diff % 60)
         time = [ (h.zero? ? nil : "#{h}h"), (m.zero? ? nil : "#{m}m"), "#{s}s"].compact.join " "
         deliver "[#{code}] #{title}\n#{fetch}. Next fetch in #{time} (#{nextf}).  [ #{feed} ]","<span style='font-size: small;'>[#{code}] #{title}<br/>#{fetch}. Next fetch in <b>#{time}</b> (#{nextf}).  <i>[ <a href='#{feed}'>#{feed}</a> ]</i></span>"
       end
     rescue Exception => e
       deliver "errör: "+e.to_s, nil
+      puts e.backtrace
     end
   end
 
