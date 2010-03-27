@@ -82,7 +82,7 @@ class Unregistered < User
     end
   end
 
-  def register
+  def register # FIXME add more calculation types
     @a, @b = 23, 19
     while @a + @b == 42
       @a = 1 + rand(100)
@@ -157,6 +157,7 @@ class Private < User
     f = [:man,:add,:remove,:mode,:format,:status]
     super im, to, m, f
     @mode       = get('mode').to_sym
+    @silent     = get 'silent'
     @use_xhtml  = get 'use xhtml'
     @use_status = get 'use status'
     plain = "Welcome to #{CONFIG['name']}! Type help for overview. Current mode is #{@mode.to_s}."
@@ -177,7 +178,7 @@ class Private < User
 [#{CONFIG['name']}] Commands:
 list -- listing feeds
 on -- enable notifications
-off -- disable notification
+off -- disable notifications
 add <feedurl> -- adding a feed
 remove <feed> -- removing a feed
 mode <format> -- set notification format
@@ -190,7 +191,7 @@ eos
 [#{CONFIG['name']}] Commands:<br/>
 <b>list</b> -- listing feeds<br/>
 <b>on</b> -- enable notifications<br/>
-<b>off</b> -- disable notification<br/>
+<b>off</b> -- disable notifications<br/>
 <b>add &lt;feedurl&gt;</b> -- adding a feed<br/>
 <b>remove &lt;feed&gt;</b> -- removing a feed<br/>
 <b>mode &lt;format&gt;</b> -- set notification format<br/>
@@ -214,11 +215,15 @@ eos
   end
 
   def on
-    deliver "not yet implemented.", nil
+    @silent = false
+    set 'silent', false
+    deliver "enabled notifications.", "<i>en</i>abled notifications."
   end
 
   def off
-    deliver "not yet implemented.", nil
+    @silent = true
+    set 'silent', true
+    deliver "disabled notifications.", "<i>dis</i>abled notifications."
   end
 
   def add(*feedlist)
@@ -297,6 +302,7 @@ eos
 
   def notify(notification)
     p "here too"
+    return if @silent
     begin
       notification.entries.each do |entry|
         unless entry.to_s.strip.empty?
@@ -399,7 +405,7 @@ class Registered < Private
 list -- listing feeds
 global -- listing all feeds of this service
 on -- enable notifications
-off -- disable notification
+off -- disable notifications
 add <feedurl> -- adding a feed
 remove <feed> -- removing a feed
 mode <format> -- set notification format
@@ -413,7 +419,7 @@ eos
 <b>list</b> -- listing feeds<br/>
 <b>global</b> -- listing all feeds of this service<br/>
 <b>on</b> -- enable notifications<br/>
-<b>off</b> -- disable notification<br/>
+<b>off</b> -- disable notifications<br/>
 <b>add &lt;feedurl&gt;</b> -- adding a feed<br/>
 <b>remove &lt;feed&gt;</b> -- removing a feed<br/>
 <b>mode &lt;format&gt;</b> -- set notification format<br/>

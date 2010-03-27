@@ -16,4 +16,5 @@ default: # default settings
   mode:       all                       # all or title are implemented
   use xhtml:  true                      # enables xhtml stanzas
   use status: true                      # enables fetch status
+  silent:     false                     # disables notifications
 ...
