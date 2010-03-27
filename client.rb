@@ -171,7 +171,9 @@ class Notifier
         p "arrived", @h.users.any?
         case CONFIG['mode'] 
           when 'private' then @h.users.first[1].notify(event) if @h.users.any?
-          when 'public'  then @h.users.values.each { |user| user.notify(event) } ### FIXME add user specific notifications
+          when 'public'  then @h.users.values.each do |user| # FIXME bottle neck
+            user.notify(event) if user.get("feeds").include? event.feed_url
+          end
         end
       rescue Exception => e
         puts "errör:" + e.to_s

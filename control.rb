@@ -306,7 +306,7 @@ eos
           a[:author] = entry.authors.empty? ? "unknown" : entry.authors.map{|a|a.name}.join(", ")
           a[:link] = entry.links.empty? ? "empty" : entry.links.first.href.to_s # FIXME extract more infos ..
           a[:published] = entry.published.to_s
-          a[:content] = entry.summary
+          a[:content] = entry.summary # BUG filter xhtml-im malformed stuff out (eg links)
           xcontent = a[:content].empty? ? "" : '<br/>'+a[:content].gsub("&", "&amp;")
 
           a.each {|k,v| b[k] = v.gsub("&", "&amp;") }
@@ -347,6 +347,82 @@ class Registered < Private
   def initialize(im, to, welcome = true)
     DB.create to.to_s
     super
+    @methods << :global
+  end
+
+  def global
+    deliver "requesting feeds ...", nil
+    iscomposing
+    Superfeedr.subscriptions do |page, feeds|
+      unless feeds.empty? && page != 1
+        f = feeds.empty? ? "no feeds" : feeds.join("\n")
+        deliver "Feeds:   [page #{page}]\n#{f}", nil
+      end
+    end
+  end
+
+  def list
+    feeds = get "feeds"
+    f = feeds.empty? ? "no feeds" : feeds.join("\n")
+    deliver "Feeds:\n#{f}", nil
+  end
+
+  def add(*feedlist)
+    deliver "requesting subscription ...", nil
+    iscomposing
+    Superfeedr.subscribe(feedlist) do |feeds|
+      set "feeds", (get("feeds") + feeds).uniq
+      f = feeds.empty? ? "no feeds" : feeds.join("\n")
+      deliver "subscribed to:\n#{f}", nil
+    end
+  end
+
+  def remove(*feedlist)
+    deliver "requesting unsubscription ...", nil
+    iscomposing
+    removelist = feedlist.clone.uniq
+    feedlist.each do |feed|
+      DB.users.each do |user| # FIXME another bottle neck
+        removelist.delete(feed) if DB.get(user, "feeds").include? feed
+      end
+    end
+    set "feeds", get("feeds") - feedlist # FIXME what if unsubscribe fail?
+    f = feedlist.empty? ? "no feeds" : feedlist.uniq.join("\n")
+    deliver "unsubscribed from:\n#{f}", nil
+    Superfeedr.unsubscribe(removelist) do |feeds|
+    end
+  end
+
+  def help
+    text = <<eos
+[#{CONFIG['name']}] Commands:
+list -- listing feeds
+global -- listing all feeds of this service
+on -- enable notifications
+off -- disable notification
+add <feedurl> -- adding a feed
+remove <feed> -- removing a feed
+mode <format> -- set notification format
+man <command> -- show a manual of the command
+format <on|off> -- set formatting on or off
+status <on|off> -- set status report on or off
+help -- show this help
+eos
+    xhtml = <<eos
+[#{CONFIG['name']}] Commands:<br/>
+<b>list</b> -- listing feeds<br/>
+<b>global</b> -- listing all feeds of this service<br/>
+<b>on</b> -- enable notifications<br/>
+<b>off</b> -- disable notification<br/>
+<b>add &lt;feedurl&gt;</b> -- adding a feed<br/>
+<b>remove &lt;feed&gt;</b> -- removing a feed<br/>
+<b>mode &lt;format&gt;</b> -- set notification format<br/>
+<b>man &lt;command&gt;</b> -- show a manual of the command<br/>
+<b>format &lt;on|off&gt;</b> -- set formatting on or off<br/>
+<b>status &lt;on|off&gt;</b> -- set status report on or off<br/>
+<b>help</b> -- show this help
+eos
+    deliver text[0..-2], xhtml[0..-2]
   end
 
 end

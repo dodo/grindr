@@ -46,6 +46,10 @@ class PublicDB < Database
     raise "create not implemented"
   end
 
+  def users
+    raise "users not implemented"
+  end
+
 end
 
 

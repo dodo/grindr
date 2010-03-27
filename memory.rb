@@ -8,7 +8,7 @@ class Memory < PublicDB
   end
 
   def create(user)
-    @data[user] = {}
+    @data[user] = {"feeds" => []}
     CONFIG['default'].each { |k,v| @data[user][k] = v }
   end
 
@@ -19,6 +19,10 @@ class Memory < PublicDB
   def set(user, key, value)
     @data[user][key] = value
     value
+  end
+
+  def users
+    @data.keys
   end
 
 end
