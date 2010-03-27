@@ -15,11 +15,8 @@
 
 = Install
 
-    It's using the standard xmpp4r library and superfeedr-ruby.
-    [ http://github.com/superfeedr/superfeedr-ruby/ ]
-    [ http://home.gna.org/xmpp4r/ ]
-    and YAML.
-    install all dependencies preferably with rubygems:
+    It's using the standard xmpp4r library, superfeedr-ruby and YAML.  
+    Install all dependencies preferably with rubygems:
         sudo gem install xmpp4r superfeedr-ruby
     Remove '.default' from config.yaml.default and edit it as you wish.
 
@@ -38,3 +35,9 @@ What is the sum of 84 and 55?
 [06:11:03 AM] gringr: [200] The Dummy Time Feed
 948 bytes fetched in 0.05s. Next fetch in 1m 21.28s (Tue Mar 02 06:12:24 +0100 2010).  [ http://superfeedr.com/dummy.xml ]
 
+= Links
+
+    [ http://github.com/superfeedr/superfeedr-ruby/ ]
+    [ http://home.gna.org/xmpp4r/ ]
+    [ http://rubygems.org/ ]
+    [ http://yaml.org/ ]
