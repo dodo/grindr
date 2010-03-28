@@ -2,7 +2,7 @@ require 'xmpp4r'
 require 'superfeedr'
 require 'load'
 require 'control'
-require 'time'
+require 'parse'
 
 
 class Client
@@ -166,9 +166,10 @@ class Notifier
   def initialize(h)
     @h = h
   end
-  def update(event)
+  def update(stanza)
     begin
         p "arrived", @h.users.any?
+        event = parse stanza
         case CONFIG['mode'] 
           when 'private' then @h.users.first[1].notify(event) if @h.users.any?
           when 'public'  then @h.users.values.each do |user| # FIXME bottle neck

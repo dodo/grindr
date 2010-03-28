@@ -37,7 +37,7 @@ begin
     if message.type == :error or message.body.nil?
         p "*"*90,"hack"
         #Superfeedr.on_stanza message # dirty hack . und geht auch nich :(
-        p message.from, message.to
+        #p message.from, message.to
       else
         p "-"*90, "argg"
         handler.update message

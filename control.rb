@@ -1,5 +1,4 @@
 require 'xmpp4r/dataforms'
-require 'time'
 require 'load'
 
 $manual = {:help => "help\nShow the list of all given commands and with a little description.",
@@ -304,41 +303,25 @@ eos
     p "here too"
     return if @silent
     begin
+      n = notification
       notification.entries.each do |entry|
-        unless entry.to_s.strip.empty?
-          p entry, entry.to_s, entry.methods
-          a, b, syms = {}, {}, {}
-          a[:title] = entry.title.to_s
-          a[:author] = entry.authors.empty? ? "unknown" : entry.authors.map{|a|a.name}.join(", ")
-          a[:link] = entry.links.empty? ? "empty" : entry.links.first.href.to_s # FIXME extract more infos ..
-          a[:published] = entry.published.to_s
-          a[:content] = entry.summary # BUG filter xhtml-im malformed stuff out (eg links)
-          xcontent = a[:content].empty? ? "" : '<br/>'+a[:content].gsub("&", "&amp;")
-
-          a.each {|k,v| b[k] = v.gsub("&", "&amp;") }
-          deliver *case @mode
-            when :title then
-              plain = "[#{a[:published]}]   #{a[:title]}   on [ #{a[:link]} ]"
-              xhtml = "<span style='font-size: small;'>[#{b[:published]}]</span>  <b>#{b[:title]}</b>  <span style='font-size: small;'><i>on [ <a href='#{b[:link]}'>#{b[:link]}</a> ]</i></span>"
-              [plain,xhtml]
-            when :all then
-              plain = "#{a[:title]}\n// Posted [#{a[:published]}] from [#{a[:author]}] on [ #{a[:link]} ]\n#{a[:content]}".strip.chomp
-              xhtml = "<b>#{b[:title]}</b><span style='font-size: small;'><br/>\n// Posted [#{b[:published]}] from [#{b[:author]}] <i>on [ <a href='#{b[:link]}'>#{b[:link]}</a> ]</i></span>\n#{xcontent}".strip.chomp
-              [plain,xhtml]
-          end
+        e = entry
+        deliver *case @mode
+          when :title then
+            plain = "[#{e.published}]   #{e.title}   on [ #{e.links} ]"
+            xhtml = "<span style='font-size: small;'>[#{e.xpublished}]</span>  <b>#{e.xtitle}</b>  <span style='font-size: small;'><i>on [ #{e.xlinks} ]</i></span>"
+            [plain,xhtml]
+          when :all then
+            plain = "#{e.title}\n// Posted [#{e.published}] from [#{e.authors}] on [ #{e.links} ]\n#{e.content}".strip.chomp
+            xhtml = "<b>#{e.xtitle}</b><span style='font-size: small;'><br/>\n// Posted [#{e.xpublished}] from [#{e.xauthors}] <i>on [ #{e.xlinks} ]</i></span>\n#{e.xcontent}".strip.chomp
+            [plain,xhtml]
         end
       end
-      if @use_status
-        title = notification.message_status
-        feed = notification.feed_url
-        nextf = notification.next_fetch
-        fetch = "[this text is gone :(]"
-        code = notification.http_status
 
-        diff, nextf = nextf - Time.now(), nextf.to_s
-        h, m, s = diff.div(3600), diff.div(60), "%.2f" % (diff % 60)
-        time = [ (h.zero? ? nil : "#{h}h"), (m.zero? ? nil : "#{m}m"), "#{s}s"].compact.join " "
-        deliver "[#{code}] #{title}\n#{fetch}. Next fetch in #{time} (#{nextf}).  [ #{feed} ]","<span style='font-size: small;'>[#{code}] #{title}<br/>#{fetch}. Next fetch in <b>#{time}</b> (#{nextf}).  <i>[ <a href='#{feed}'>#{feed}</a> ]</i></span>"
+      if @use_status
+        plain = "[#{n.http_status}] #{n.feed_title}\n#{n.message_status} Next fetch in #{n.time_left} (#{n.next_fetch}).  [ #{n.feed_url} ]"
+        xhtml = "<span style='font-size: small;'>[#{n.http_status}] #{n.feed_title}<br/>#{n.message_status} Next fetch in <b>#{n.time_left}</b> (#{n.next_fetch}).  <i>[ <a href='#{n.feed_url}'>#{n.feed_url}</a> ]</i></span>"
+        deliver plain, xhtml
       end
     rescue Exception => e
       deliver "errör: "+e.to_s, nil
